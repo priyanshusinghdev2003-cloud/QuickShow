@@ -1,5 +1,6 @@
 import Featuredsection from "@/components/Featuredsection";
 import Hero from "@/components/Hero";
+import TrailerSection from "@/components/TrailerSection";
 import gsap from "gsap";
 import { useEffect, useRef } from "react";
 const Home = () => {
@@ -18,6 +19,7 @@ const Home = () => {
     <div ref={homeRef}>
       <Hero />
       <Featuredsection />
+      <TrailerSection />
     </div>
   );
 };

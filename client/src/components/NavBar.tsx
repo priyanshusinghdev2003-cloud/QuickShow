@@ -9,7 +9,7 @@ const navLinks: { title: string; path: string }[] = [
   { title: "Movies", path: "/movies" },
   { title: "Theaters", path: "/theaters" },
   { title: "Releases", path: "/releases" },
-  { title: "Favorites", path: "/favorites" },
+  { title: "Favorites", path: "/favorite" },
 ];
 
 function NavBar() {
