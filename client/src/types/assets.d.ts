@@ -1,5 +1,3 @@
-
-
 export interface Trailer {
   image: string;
   videoUrl: string;
@@ -25,8 +23,8 @@ export interface Show {
   genres: Genre[];
   casts: Cast[];
   release_date: string;
-  original_language: string;
-  tagline: string;
+  original_language?: string;
+  tagline?: string;
   vote_average: number;
   vote_count: number;
   runtime: number;
@@ -45,7 +43,7 @@ export interface DashboardShow {
   showDateTime: string;
   showPrice: number;
   occupiedSeats: Record<string, string>;
-   __v?: number;
+  __v?: number;
 }
 
 export interface DashboardData {
