@@ -60,7 +60,7 @@ export const addShow = async (req, res) => {
         backdrop_path: movieApiData.backdrop_path,
         release_date: movieApiData.release_date,
         original_language: movieApiData.original_language,
-        tagline: movieApiData.tagline || '',
+        tagline: movieApiData.tagline || "",
         casts: movieCreditData.cast,
         genres: movieApiData.genres,
         vote_average: movieApiData.vote_average,
@@ -68,9 +68,8 @@ export const addShow = async (req, res) => {
         runtime: movieApiData.runtime,
       };
       movie = await Movie.create(movieDetails);
-
     }
-    const showToCreate = []
+    const showToCreate = [];
     showInput.forEach((show) => {
       const showDate = show.date;
       show.time.forEach((time) => {
@@ -82,13 +81,70 @@ export const addShow = async (req, res) => {
           occupiedSeats: {},
         });
       });
-    })
-    if(showToCreate.length > 0){
+    });
+    if (showToCreate.length > 0) {
       await Show.insertMany(showToCreate);
     }
     res.json({
       message: "Show added successfully",
       success: true,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: error.message || "Something went wrong",
+      success: false,
+    });
+  }
+};
+
+export const getShows = async (req, res) => {
+  try {
+    const shows = await Show.find({ showDateTime: { $gte: new Date() } })
+      .populate("movie")
+      .sort({ showDateTime: 1 });
+    const uniqueShows = new Set(shows.map((show) => show.movie));
+    res.json({
+      message: "Shows fetched successfully",
+      success: true,
+      shows: Array.from(uniqueShows),
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: error.message || "Something went wrong",
+      success: false,
+    });
+  }
+};
+
+export const getShowById = async (req, res) => {
+  try {
+    const { movieId } = req.params;
+    const show = await Show.find({
+      movie: movieId,
+      showDateTime: { $gte: new Date() },
+    });
+    if (!show) {
+      return res.status(404).json({
+        message: "Show not found",
+        success: false,
+      });
+    }
+    const movie = await Movie.findById(movieId);
+    const dateTime = {};
+    show.forEach((show) => {
+      const date = show.showDateTime.toISOString().split("T")[0];
+      if (!dateTime[date]) {
+        dateTime[date] = [];
+      }
+      dateTime[date].push({ time: show.showDateTime, showId: show._id });
+    });
+    res.json({
+      message: "Show details fetched successfully",
+      success: true,
+      movie,
+      dateTime,
     });
   } catch (error) {
     console.log(error);
