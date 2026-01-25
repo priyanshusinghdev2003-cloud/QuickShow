@@ -1,4 +1,4 @@
-import { assets, dummyDateTimeData, dummyShowsData } from "@/assets/assets";
+import { assets } from "@/assets/assets";
 import BlurCircle from "@/components/BlurCircle";
 import Loading from "@/components/Loading";
 import { useAppContext } from "@/context/AppContext";
@@ -28,7 +28,6 @@ const SeatLayout = () => {
     movie: Show | undefined;
     dateTime: DateTimeMap | undefined;
   } | null>(null);
-  const navigate = useNavigate();
   const { axios, user, getToken } = useAppContext();
   const [occupiedSeats, setOccupiedSeats] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);

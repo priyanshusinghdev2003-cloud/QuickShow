@@ -1,4 +1,3 @@
-import { dummyDashboardData } from "@/assets/assets";
 import Title from "@/components/admin/Title";
 import BlurCircle from "@/components/BlurCircle";
 import Loading from "@/components/Loading";
