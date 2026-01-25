@@ -1,6 +1,7 @@
 import { assets, dummyDateTimeData, dummyShowsData } from "@/assets/assets";
 import BlurCircle from "@/components/BlurCircle";
 import Loading from "@/components/Loading";
+import { useAppContext } from "@/context/AppContext";
 import isoTimeFormat from "@/lib/isoTimeFormat";
 import type { DateTimeMap, Show } from "@/types/assets";
 import { ArrowRightIcon, ClockIcon } from "lucide-react";
@@ -28,18 +29,41 @@ const SeatLayout = () => {
     dateTime: DateTimeMap | undefined;
   } | null>(null);
   const navigate = useNavigate();
+  const { axios, user, getToken } = useAppContext();
+  const [occupiedSeats, setOccupiedSeats] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const getShow = async () => {
     try {
-      const data = dummyShowsData.find((show) => show._id === id);
-      if (data) {
+      const { data } = await axios.get(`/api/show/${id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (data.success) {
         setShow({
-          movie: data,
-          dateTime: dummyDateTimeData,
+          movie: data.movie,
+          dateTime: data.dateTime,
         });
       }
     } catch (error) {
       console.error("Error fetching show:", error);
+    }
+  };
+
+  const getOccupiedSeats = async () => {
+    try {
+      const { data } = await axios.get(
+        `/api/booking/occupied-seats/${selectedTime?.showId}`,
+        {
+          headers: { Authorization: `Bearer ${await getToken()}` },
+        },
+      );
+      if (data.success) {
+        setOccupiedSeats(data.occupiedSeats);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching occupied seats:", error);
     }
   };
 
@@ -52,8 +76,47 @@ const SeatLayout = () => {
       toast.error("You can only select 5 seats at a time");
     } else if (selectedseats.includes(seatId)) {
       setSelectedseats(selectedseats.filter((seat) => seat !== seatId));
+    } else if (occupiedSeats.includes(seatId)) {
+      toast.error("Seat is already booked");
     } else {
       setSelectedseats([...selectedseats, seatId]);
+    }
+  };
+
+  const bookTicket = async () => {
+    try {
+      if (!selectedTime) {
+        toast.error("Please select a time first");
+        return;
+      }
+      if (selectedseats.length === 0) {
+        toast.error("Please select seats");
+        return;
+      }
+      if (!user) {
+        toast.error("Please login to book tickets");
+        return;
+      }
+      setLoading(true);
+      const { data } = await axios.post(
+        "/api/booking/create",
+        {
+          showId: selectedTime?.showId,
+          selectedSeats: selectedseats,
+        },
+        {
+          headers: { Authorization: `Bearer ${await getToken()}` },
+        },
+      );
+      if (data.success) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.message);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error("Error booking ticket:", error);
+      setLoading(false);
     }
   };
   const renderSeats = (row: string, count = 9) => (
@@ -65,7 +128,8 @@ const SeatLayout = () => {
             <button
               key={seatId}
               onClick={() => handleSeatClick(seatId)}
-              className={`h-8 w-8 rounded border border-primary/60 cursor-pointer ${selectedseats.includes(seatId) && "bg-primary text-white"}`}
+              className={`h-8 w-8 rounded border border-primary/60 cursor-pointer
+                ${selectedseats.includes(seatId) && "bg-primary text-white"} ${occupiedSeats.includes(seatId) && "opacity-50"}`}
             >
               {seatId}
             </button>
@@ -78,6 +142,12 @@ const SeatLayout = () => {
   useEffect(() => {
     getShow();
   }, [id]);
+
+  useEffect(() => {
+    if (selectedTime) {
+      getOccupiedSeats();
+    }
+  }, [selectedTime]);
 
   return show ? (
     <div className="flex flex-col md:flex-row px-6 md:px-16 lg:px-40 py-30 md:pt-50">
@@ -112,7 +182,8 @@ const SeatLayout = () => {
           </div>
         </div>
         <button
-          onClick={() => navigate("/my-bookings")}
+          onClick={bookTicket}
+          disabled={loading}
           className="flex items-stretch gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95"
         >
           Proceed to Checkout <ArrowRightIcon strokeWidth={3} />

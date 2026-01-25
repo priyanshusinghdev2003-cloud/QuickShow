@@ -8,8 +8,16 @@ import showRouter from "./routes/show.routes.js";
 import bookingRouter from "./routes/booking.route.js";
 import adminRouter from "./routes/admin.routes.js";
 import userRouter from "./routes/user.routes.js";
+import { stripeWebhooks } from "./controllers/stripe.webhooks.js";
 
 const app = express();
+
+//stripe webhook
+app.post(
+  "/api/stripe",
+  express.raw({ type: "application/json" }),
+  stripeWebhooks,
+);
 
 //Middleware
 app.use(clerkMiddleware());

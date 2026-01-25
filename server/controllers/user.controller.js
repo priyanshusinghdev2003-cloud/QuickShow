@@ -23,6 +23,7 @@ export const getUserBookings = async (req, res) => {
 export const updateUserFavouriteMovie = async (req, res) => {
   try {
     const { movieId } = req.body;
+
     const userId = req.auth().userId;
     const user = await clerkClient.users.getUser(userId);
     if (!user.privateMetadata.favorites) {

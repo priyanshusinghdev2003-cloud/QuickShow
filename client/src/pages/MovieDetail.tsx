@@ -8,6 +8,7 @@ import type { DateTimeMap, Show } from "@/types/assets";
 import { Heart, PlayCircleIcon, StarIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 function MovieDetail() {
   const { id } = useParams();
@@ -16,7 +17,15 @@ function MovieDetail() {
     dateTime: DateTimeMap | undefined;
   } | null>(null);
   const navigate = useNavigate();
-  const { axios, baseImgUrl, shows } = useAppContext();
+  const {
+    axios,
+    baseImgUrl,
+    shows,
+    user,
+    getToken,
+    fetchFavoriteShows,
+    favoriteShows,
+  } = useAppContext();
 
   const getShow = async () => {
     try {
@@ -26,6 +35,33 @@ function MovieDetail() {
           movie: data.movie,
           dateTime: data.dateTime,
         });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const handleFavorite = async () => {
+    try {
+      if (!user) {
+        toast.error("Please login to add to favorites");
+        return;
+      }
+      const { data } = await axios.post(
+        `/api/user/update-favourite`,
+        {
+          movieId: id,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${await getToken()}`,
+          },
+        },
+      );
+      if (data.success) {
+        toast.success(data.message);
+        fetchFavoriteShows();
+      } else {
+        toast.error(data.message);
       }
     } catch (error) {
       console.error(error);
@@ -70,8 +106,13 @@ function MovieDetail() {
             >
               Buy Tickets
             </a>
-            <button className="bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95">
-              <Heart className={`w-5 h-5`} />
+            <button
+              className="bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95"
+              onClick={handleFavorite}
+            >
+              <Heart
+                className={`w-5 h-5 ${favoriteShows.find((show) => show._id == id) ? "text-primary fill-primary" : ""}`}
+              />
             </button>
           </div>
         </div>
