@@ -6,7 +6,7 @@ import isoTimeFormat from "@/lib/isoTimeFormat";
 import type { DateTimeMap, Show } from "@/types/assets";
 import { ArrowRightIcon, ClockIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 const SeatLayout = () => {
