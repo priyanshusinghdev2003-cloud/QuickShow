@@ -2,6 +2,7 @@ import { Inngest } from "inngest";
 import User from "../model/User.models.js";
 import Booking from "../model/Booking.model.js";
 import Show from "../model/Show.model.js";
+import sendEmail from "../config/nodemailer.js";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
@@ -73,10 +74,53 @@ const cancelBookingAndReleaseSeats = inngest.createFunction(
   },
 );
 
+//  inngest function to send email to user after booking
+const sendBookingEmail = inngest.createFunction(
+  { id: "send-booking-confirmation-email" },
+  { event: "app/show.booked" },
+  async ({ event, step }) => {
+    const { bookingId } = event.data;
+    const booking = await Booking.findById(bookingId)
+      .populate({
+        path: "show",
+        populate: {
+          path: "movie",
+          model: "Movie",
+        },
+      })
+      .populate("user");
+    await sendEmail({
+      to: booking.user.email,
+      subject: `Payment Confirmation: "${booking.show.movie.title}" booked1`,
+      body: `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #ffffff;">
+            <h1 style="margin: 0; font-size: 24px;">Booking Confirmed!</h1>
+          </div>
+          <div style="padding: 30px; color: #333333; line-height: 1.6;">
+            <p>Hi <strong>${booking.user.name}</strong>,</p>
+            <p>Get ready for an amazing time! Your booking for <strong>${booking.show.movie.title}</strong> has been successfully confirmed.</p>
+            <div style="background-color: #f9f9f9; padding: 20px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #e50914;">
+              <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${new Date(booking.show.showDateTime).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+              <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${new Date(booking.show.showDateTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</p>
+              <p style="margin: 0;"><strong>Seats:</strong> ${booking.bookedSeats.join(", ")}</p>
+            </div>
+            <p style="font-size: 18px; font-weight: bold; text-align: center; color: #e50914; margin-top: 30px;">Enjoy the show!</p>
+          </div>
+          <div style="padding: 20px; text-align: center; font-size: 12px; color: #999999; background-color: #f4f4f4;">
+            <p>Please show this confirmation at the theater entrance.</p>
+          </div>
+        </div>
+      `,
+    });
+  },
+);
+
 // Create an empty array where we'll export future Inngest functions
 export const functions = [
   syncUserCreation,
   syncUserDeletion,
   syncUserUpdate,
   cancelBookingAndReleaseSeats,
+  sendBookingEmail,
 ];

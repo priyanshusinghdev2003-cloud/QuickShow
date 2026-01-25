@@ -21,6 +21,7 @@
     "helmet": "^8.1.0",
     "inngest": "^3.49.3",
     "mongoose": "^9.1.5",
+    "nodemailer": "^7.0.12",
     "stripe": "^20.2.0",
     "svix": "^1.84.1"
   },
