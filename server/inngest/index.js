@@ -91,7 +91,7 @@ const sendBookingEmail = inngest.createFunction(
       .populate("user");
     await sendEmail({
       to: booking.user.email,
-      subject: `Payment Confirmation: "${booking.show.movie.title}" booked1`,
+      subject: `Payment Confirmation: "${booking.show.movie.title}" booked!`,
       body: `
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #ffffff;">
@@ -116,6 +116,128 @@ const sendBookingEmail = inngest.createFunction(
   },
 );
 
+//inngest function to send reminders
+const sendShowReminders = inngest.createFunction(
+  { id: "send-show-reminders" },
+  { cron: "0 */8 * * *" }, // every 8 hours
+  async ({ step }) => {
+    const now = new Date();
+    const in8Hours = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const windowStart = new Date(in8Hours.getTime() - 10 * 60 * 1000);
+
+    // prepare reminder tasks
+    const reminderTasks = await step.run("prepare-reminder-tasks", async () => {
+      const shows = await Show.find({
+        showDateTime: {
+          $gte: windowStart,
+          $lte: in8Hours,
+        },
+      }).populate("movie");
+      const tasks = [];
+      for (const show of shows) {
+        if (!show.movie || !show.occupiedSeats) continue;
+        const userIds = [...new Set(Object.values(show.occupiedSeats))];
+        if (userIds.length === 0) continue;
+        const users = await User.find({ _id: { $in: userIds } }).select(
+          "email name",
+        );
+        for (const user of users) {
+          tasks.push({
+            userEmail: user.email,
+            userName: user.name,
+            movieTitle: show.movie.title,
+            showDateTime: show.showDateTime,
+            bookedSeats: show.bookedSeats,
+          });
+        }
+      }
+      return tasks;
+    });
+    if (reminderTasks.length === 0) {
+      return { send: 0, message: "No reminders to send" };
+    }
+    // send reminders
+    const results = await step.run("send-all-reminders", async () => {
+      return await Promise.allSettled(
+        reminderTasks.map(async (task) => {
+          return await sendEmail({
+            to: task.userEmail,
+            subject: `Reminder: "${task.movieTitle}" is showing soon!`,
+            body: `
+              <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #ffffff;">
+                  <h1 style="margin: 0; font-size: 24px;">Reminder!</h1>
+                </div>
+                <div style="padding: 30px; color: #333333; line-height: 1.6;">
+                  <p>Hi <strong>${task.userName}</strong>,</p>
+                  <p>Don't miss out on the movie you booked! Your show for <strong>${task.movieTitle}</strong> is just 8 hours away.</p>
+                  <div style="background-color: #f9f9f9; padding: 20px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #e50914;">
+                    <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${new Date(task.showDateTime).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${new Date(task.showDateTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</p>
+                    <p style="margin: 0;"><strong>Seats:</strong> ${task.bookedSeats.join(", ")}</p>
+                  </div>
+                  <p style="font-size: 18px; font-weight: bold; text-align: center; color: #e50914; margin-top: 30px;">See you there!</p>
+                </div>
+                <div style="padding: 20px; text-align: center; font-size: 12px; color: #999999; background-color: #f4f4f4;">
+                  <p>Please show this confirmation at the theater entrance.</p>
+                </div>
+              </div>
+            `,
+          });
+        }),
+      );
+    });
+
+    const sent = results.filter(
+      (result) => result.status === "fulfilled",
+    ).length;
+    const failed = results.length - sent;
+    return {
+      sent,
+      failed,
+      message: `Sent ${sent} reminders, failed to send ${failed}`,
+    };
+  },
+);
+
+const sendNewShowNotifications = inngest.createFunction(
+  { id: "send-new-show-notifications" },
+  { event: "app/show.added" },
+  async ({ event }) => {
+    const { movieTitle } = event.data;
+    const users = await User.find({});
+    for (const user of users) {
+      const userEmail = user.email;
+      const userName = user.name;
+      const subject = `New Show Added: ${movieTitle}`;
+      const body = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 24px;">New Show Added!</h1>
+        </div>
+        <div style="padding: 30px; color: #333333; line-height: 1.6;">
+          <p>Hi <strong>${userName}</strong>,</p>
+          <p>A new show for <strong>${movieTitle}</strong> has been added to our theater.</p>
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #e50914;">
+            <p style="margin: 0 0 10px 0;"><strong>Movie:</strong> ${movieTitle}</p>
+          </div>
+          <p style="font-size: 18px; font-weight: bold; text-align: center; color: #e50914; margin-top: 30px;">Check it out!</p>
+        </div>
+        <div style="padding: 20px; text-align: center; font-size: 12px; color: #999999; background-color: #f4f4f4;">
+          <p>Please show this confirmation at the theater entrance.</p>
+        </div>
+      </div>
+    `;
+      await sendEmail({
+        to: userEmail,
+        subject,
+        body,
+      });
+    }
+    return { sent: users.length, message: "New show notifications sent" };
+  },
+);
+
 // Create an empty array where we'll export future Inngest functions
 export const functions = [
   syncUserCreation,
@@ -123,4 +245,6 @@ export const functions = [
   syncUserUpdate,
   cancelBookingAndReleaseSeats,
   sendBookingEmail,
+  sendShowReminders,
+  sendNewShowNotifications,
 ];

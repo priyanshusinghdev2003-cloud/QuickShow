@@ -2,6 +2,7 @@ import axios from "axios";
 import "dotenv/config";
 import Movie from "../model/Movie.models.js";
 import Show from "../model/Show.model.js";
+import { inngest } from "../inngest/index.js";
 
 export const getNowPlayingMovies = async (req, res) => {
   try {
@@ -85,6 +86,12 @@ export const addShow = async (req, res) => {
     if (showToCreate.length > 0) {
       await Show.insertMany(showToCreate);
     }
+    await inngest.send({
+      name: "app/show.added",
+      data: {
+        movieTitle: movie.title,
+      },
+    });
     res.json({
       message: "Show added successfully",
       success: true,
