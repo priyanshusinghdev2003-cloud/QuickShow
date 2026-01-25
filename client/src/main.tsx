@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import { BrowserRouter } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { shadcn } from "@clerk/themes";
+import { AppProvider } from "./context/AppContext.tsx";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -19,7 +20,9 @@ createRoot(document.getElementById("root")!).render(
     }}
   >
     <BrowserRouter>
-      <App />
+      <AppProvider>
+        <App />
+      </AppProvider>
     </BrowserRouter>
   </ClerkProvider>,
 );

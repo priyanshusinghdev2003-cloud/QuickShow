@@ -1,17 +1,18 @@
 import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BlurCircle from "./BlurCircle";
-import { dummyShowsData } from "@/assets/assets";
 import MovieCard from "./MovieCard";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useAppContext } from "@/context/AppContext";
 
 gsap.registerPlugin(ScrollTrigger);
 
 function Featuredsection() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { shows } = useAppContext();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -64,7 +65,7 @@ function Featuredsection() {
         className="flex flex-wrap max-sm:justify-center gap-8 mt-8"
         ref={containerRef}
       >
-        {dummyShowsData.slice(0, 4).map((movie) => (
+        {shows.slice(0, 4).map((movie) => (
           <MovieCard key={movie._id} movie={movie} />
         ))}
       </div>

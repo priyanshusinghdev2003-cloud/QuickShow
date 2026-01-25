@@ -2,6 +2,7 @@ import { dummyDashboardData } from "@/assets/assets";
 import Title from "@/components/admin/Title";
 import BlurCircle from "@/components/BlurCircle";
 import Loading from "@/components/Loading";
+import { useAppContext } from "@/context/AppContext";
 import { dateFormat } from "@/lib/DateFormat";
 import type { DashboardData } from "@/types/assets";
 import {
@@ -12,6 +13,7 @@ import {
   UserIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const currency = import.meta.env.VITE_CURRENCY as string;
@@ -22,6 +24,7 @@ const Dashboard = () => {
     totalUser: 0,
   });
   const [loading, setLoading] = useState(true);
+  const { axios, getToken, user, baseImgUrl } = useAppContext();
   const dashboardCards = [
     {
       title: "Total Bookings",
@@ -47,18 +50,28 @@ const Dashboard = () => {
 
   const getDashboardData = async () => {
     try {
-      const data = dummyDashboardData;
-      setDashboard(data);
+      const { data } = await axios.get("/api/admin/dashboard", {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`,
+        },
+      });
+      if (!data.success) {
+        toast.error(data.message);
+        return;
+      }
+      setDashboard(data.dashboardData);
       setLoading(false);
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
+      toast.error("Failed to fetch dashboard data: ", error);
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    getDashboardData();
-  }, []);
+    if (user) {
+      getDashboardData();
+    }
+  }, [user]);
 
   return !loading ? (
     <>
@@ -89,7 +102,7 @@ const Dashboard = () => {
             key={show._id}
           >
             <img
-              src={show.movie.poster_path}
+              src={`${baseImgUrl}${show.movie.poster_path}`}
               alt=""
               className="h-60 w-full object-cover"
             />

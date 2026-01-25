@@ -1,11 +1,11 @@
-import { dummyDateTimeData, dummyShowsData } from "@/assets/assets";
 import BlurCircle from "@/components/BlurCircle";
 import DateSelect from "@/components/DateSelect";
 import Loading from "@/components/Loading";
 import MovieCard from "@/components/MovieCard";
+import { useAppContext } from "@/context/AppContext";
 import timeFormat from "@/lib/timeFormat";
 import type { DateTimeMap, Show } from "@/types/assets";
-import { Heart, Loader2Icon, PlayCircleIcon, StarIcon } from "lucide-react";
+import { Heart, PlayCircleIcon, StarIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -16,14 +16,15 @@ function MovieDetail() {
     dateTime: DateTimeMap | undefined;
   } | null>(null);
   const navigate = useNavigate();
+  const { axios, baseImgUrl, shows } = useAppContext();
 
   const getShow = async () => {
     try {
-      const showById = dummyShowsData.find((show) => show.id === Number(id));
-      if (showById) {
+      const { data } = await axios.get(`/api/show/${id}`);
+      if (data.success) {
         setShow({
-          movie: showById,
-          dateTime: dummyDateTimeData,
+          movie: data.movie,
+          dateTime: data.dateTime,
         });
       }
     } catch (error) {
@@ -37,7 +38,7 @@ function MovieDetail() {
     <div className="px-6 md:px-16 lg:px-40 pt-30 md:pt-50">
       <div className="flex flex-col md:flex-row gap-8 max-w-6xl mx-auto">
         <img
-          src={show?.movie?.poster_path}
+          src={`${baseImgUrl}${show?.movie?.poster_path}`}
           alt=""
           className="max-md:mx-auto rounded-xl h-104 max-w-70 object-cover"
         />
@@ -81,7 +82,7 @@ function MovieDetail() {
           {show?.movie?.casts.slice(0, 12).map((cast, idx) => (
             <div key={idx} className="flex flex-col items-center text-center">
               <img
-                src={cast.profile_path}
+                src={`${baseImgUrl}${cast.profile_path}`}
                 alt={cast.name}
                 className="rounded-full h-20 md:h-20 aspect-square object-cover"
               />
@@ -93,7 +94,7 @@ function MovieDetail() {
       <DateSelect id={id} dateTime={show.dateTime} />
       <p className="text-lg font-medium mt-20 mb-8">You May Also Like</p>
       <div className="flex flex-wrap max-sm:justify-center gap-8">
-        {dummyShowsData.slice(0, 4).map((show) => (
+        {shows.slice(0, 4).map((show) => (
           <MovieCard key={show._id} movie={show} />
         ))}
       </div>

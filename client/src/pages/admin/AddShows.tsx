@@ -1,6 +1,6 @@
-import { dummyShowsData } from "@/assets/assets";
 import Title from "@/components/admin/Title";
 import Loading from "@/components/Loading";
+import { useAppContext } from "@/context/AppContext";
 import kConverter from "@/lib/kConverter";
 import type { Show } from "@/types/assets";
 import { CheckIcon, DeleteIcon, StarIcon } from "lucide-react";
@@ -14,10 +14,19 @@ const AddShows = () => {
   const [dateTimeSelection, setDateTimeSelection] = useState({});
   const [dateTimeInput, setDateTimeInput] = useState("");
   const [showPrice, setShowPrice] = useState("");
+  const { axios, getToken, user, baseImgUrl } = useAppContext();
+  const [addingShow, setAddingShow] = useState(false);
 
   const fetchNowPlayingMovies = async () => {
     try {
-      setNowPlayingMovies(dummyShowsData);
+      const { data } = await axios.get("/api/show/now-playing", {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`,
+        },
+      });
+      if (data.success) {
+        setNowPlayingMovies(data.movies);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -52,22 +61,52 @@ const AddShows = () => {
       return { ...prev, [date]: filteredTimes };
     });
   };
-  const handleAddShow = () => {
-    if (!dateTimeSelection || !showPrice) {
-      toast.error("Please fill all the fields");
-      return;
+  const handleAddShow = async () => {
+    try {
+      setAddingShow(true);
+      if (
+        Object.keys(dateTimeSelection).length === 0 ||
+        !showPrice ||
+        !selectedMovie
+      ) {
+        toast.error("Please fill all the fields");
+        return;
+      }
+      const show = {
+        movieId: selectedMovie,
+        showInput: Object.entries(dateTimeSelection).map(([date, time]) => ({
+          date,
+          time,
+        })),
+        showPrice: Number(showPrice),
+      };
+      const { data } = await axios.post("/api/show/add", show, {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`,
+        },
+      });
+      if (data.success) {
+        toast.success("Show added successfully");
+        setSelectedMovie(null);
+        setDateTimeSelection({});
+        setShowPrice("");
+        setAddingShow(false);
+      } else {
+        toast.error(data.message);
+        setAddingShow(false);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Something went wrong");
+      setAddingShow(false);
     }
-    const show = {
-      movie_id: selectedMovie,
-      date_time: dateTimeSelection,
-      price: showPrice,
-    };
-    console.log(show);
   };
 
   useEffect(() => {
-    fetchNowPlayingMovies();
-  }, []);
+    if (user) {
+      fetchNowPlayingMovies();
+    }
+  }, [user]);
   return nowPlayingMovies.length > 0 ? (
     <>
       <Title text1="Add" text2="Shows" />
@@ -82,7 +121,7 @@ const AddShows = () => {
             >
               <div className="relative rounded-lg overflow-hidden">
                 <img
-                  src={movie.backdrop_path}
+                  src={`${baseImgUrl}${movie.backdrop_path}`}
                   alt=""
                   className="w-full object-cover h-48 brightness-90"
                 />
@@ -172,6 +211,7 @@ const AddShows = () => {
       )}
       <button
         onClick={handleAddShow}
+        disabled={addingShow}
         className="bg-primary text-white px-8 py-2 rounded mt-6 hover:bg-primary/90 transition-all cursor-pointer"
       >
         Add Show

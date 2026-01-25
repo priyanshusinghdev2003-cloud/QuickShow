@@ -1,18 +1,29 @@
-import { dummyBookingData } from "@/assets/assets";
 import Title from "@/components/admin/Title";
 import Loading from "@/components/Loading";
+import { useAppContext } from "@/context/AppContext";
 import { dateFormat } from "@/lib/DateFormat";
 import type { Booking } from "@/types/assets";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const ListBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY as string;
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const { axios, getToken, user } = useAppContext();
 
   const getAllBookings = async () => {
     try {
-      setBookings(dummyBookingData);
+      const { data } = await axios.get("/api/admin/all-bookings", {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`,
+        },
+      });
+      if (data.success) {
+        setBookings(data.bookings);
+      } else {
+        toast.error(data.message || "Failed to fetch bookings");
+      }
       setLoading(false);
     } catch (error) {
       console.log(error);
@@ -21,8 +32,10 @@ const ListBookings = () => {
   };
 
   useEffect(() => {
-    getAllBookings();
-  }, []);
+    if (user) {
+      getAllBookings();
+    }
+  }, [user]);
   return !loading ? (
     <>
       <Title text1="List" text2="Bookings" />
