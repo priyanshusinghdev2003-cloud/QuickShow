@@ -5,6 +5,7 @@ import { dateFormat } from "@/lib/DateFormat";
 import timeFormat from "@/lib/timeFormat";
 import type { Booking } from "@/types/assets";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 function MyBookings() {
@@ -73,9 +74,12 @@ function MyBookings() {
                   {booking.amount}
                 </p>
                 {!booking.isPaid && (
-                  <button className="bg-primary text-sm px-4 py-1.5 mb-3 font-medium cursor-pointer rounded-full">
+                  <Link
+                    to={booking.paymentLink!}
+                    className="bg-primary text-sm px-4 py-1.5 mb-3 font-medium cursor-pointer rounded-full"
+                  >
                     Pay Now
-                  </button>
+                  </Link>
                 )}
               </div>
               <div className="text-sm">
