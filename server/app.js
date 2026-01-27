@@ -25,7 +25,15 @@ app.post(
 app.use(helmet());
 
 app.use(clerkMiddleware());
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://quick-show-puce-sigma.vercel.app",
+      "http://localhost:3000",
+    ],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 //Rate Limiting
